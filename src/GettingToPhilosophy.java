@@ -1,15 +1,16 @@
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Scanner;
-import java.net.*;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.HashSet;
+import java.util.Scanner;
 
-import org.json.*;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.*;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 public class GettingToPhilosophy {
@@ -20,8 +21,8 @@ public class GettingToPhilosophy {
     static String api = "w/api.php?";
     static String failure = "This page never gets to philosophy!";
 
-    public static void main(String[] args) {
-        HashMap<String, Integer> hash = new HashMap<String, Integer>();
+    public static void main(String[] args) throws Exception {
+        PhilosophyDB.connect();
         Scanner in = new Scanner(System.in);
         in.useDelimiter(System.getProperty("line.separator")); 
         String term;
@@ -35,15 +36,15 @@ public class GettingToPhilosophy {
             	in.close();
                 break;
             } else if (term.equals("a")) {
-            	printAnalytics(hash);
+            	printAnalytics();
             	continue;
             }
             // Check to see if this input has already been processed.
-            if(hash.containsKey(term)) {
-            	if (hash.get(term) == -1) {
+            if(PhilosophyDB.exists(term)) {
+            	if (PhilosophyDB.get(term) == -1) {
             		System.out.println(failure);
             	} else {
-            		System.out.println(hash.get(term));
+            		System.out.println(PhilosophyDB.get(term));
             	}
                 continue;
             }
@@ -65,7 +66,7 @@ public class GettingToPhilosophy {
                     String searchResult = wikiSearch(term);
                     clicks = getToPhilosophy(searchResult);
                 }
-                hash.put(term, clicks);
+                PhilosophyDB.put(term, clicks);
                 if(clicks == -1) {
                 	System.out.println(failure);
                 } else {
@@ -76,7 +77,7 @@ public class GettingToPhilosophy {
                  System.out.println("Error fetching wikipedia page. Are you connected to the internet?");
             }
         }
-        printAnalytics(hash);
+        printAnalytics();
     }
 
     private static int getToPhilosophy(String link) throws IOException{
@@ -141,19 +142,11 @@ public class GettingToPhilosophy {
         return resp;
     }
     
-    private static void printAnalytics(HashMap<String, Integer> hash) {
-    	Collection<Integer> collection = hash.values();
-    	int total, success, fail, sum;
-    	total = success = fail = sum = 0;
-    	for(Integer i : collection) {
-    		total += 1;
-    		if (i >= 0) {
-    			success += 1;
-    			sum += i;
-    		} else {
-    			fail += 1;
-    		}
-    	}
+    private static void printAnalytics() throws Exception {
+    	int total = PhilosophyDB.getAll();
+    	int success = PhilosophyDB.getSuccess();
+    	int fail = PhilosophyDB.getFail();
+    	int sum = PhilosophyDB.getSum();
     	System.out.println("Queries that ended in philosophy: " + success + "/" + total);
     	System.out.println("Queries that did not end in philosophy: " + fail + "/" + total);
     	System.out.println("Average number of clicks to get to philosophy: " + String.format("%.2f", sum*1.0/success));
